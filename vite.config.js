@@ -90,6 +90,7 @@ function serveLocalesPlugin() {
 }
 
 export default defineConfig({
+    base: "/betaflight-configurator/",
     define: {
         __APP_VERSION__: JSON.stringify(pkg.version),
         __APP_PRODUCTNAME__: JSON.stringify(pkg.productName),
