@@ -17,9 +17,49 @@ function serveFileFromDirectory(directory) {
         const absolutePath = path.resolve(process.cwd(), directory, filePath);
 
         try {
-            const fileContents = readFileSync(absolutePath, "utf-8");
+            // Set proper content type based on file extension
+            const ext = path.extname(absolutePath).toLowerCase();
+            let contentType = "text/plain";
+
+            switch (ext) {
+                case ".svg":
+                    contentType = "image/svg+xml";
+                    break;
+                case ".png":
+                    contentType = "image/png";
+                    break;
+                case ".jpg":
+                case ".jpeg":
+                    contentType = "image/jpeg";
+                    break;
+                case ".json":
+                    contentType = "application/json";
+                    break;
+                case ".css":
+                    contentType = "text/css";
+                    break;
+                case ".js":
+                    contentType = "application/javascript";
+                    break;
+                case ".html":
+                    contentType = "text/html";
+                    break;
+            }
+
+            // Read file with appropriate encoding
+            const encoding =
+                ext === ".svg" || ext === ".json" || ext === ".css" || ext === ".js" || ext === ".html"
+                    ? "utf-8"
+                    : null;
+            const fileContents = readFileSync(absolutePath, encoding);
+
+            // Set proper headers
+            res.setHeader("Content-Type", contentType);
+            res.setHeader("Cache-Control", "public, max-age=31536000"); // Cache for 1 year
+
             res.end(fileContents);
         } catch (e) {
+            console.log(`Failed to serve file: ${absolutePath}`, e.message);
             // If file not found or any other error, pass to the next middleware
             next();
         }
@@ -120,6 +160,8 @@ export default defineConfig({
     server: {
         port: 8000,
         strictPort: true,
+        host: "0.0.0.0", // Allow external connections
+        allowedHosts: ["lyric-testaceous-scholarly.ngrok-free.dev"],
     },
     preview: {
         port: 8080,

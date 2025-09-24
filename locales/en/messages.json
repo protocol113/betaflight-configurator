@@ -3344,6 +3344,60 @@
     "escDshotDirectionDialog-StopWizard": {
         "message": "Stop motors"
     },
+    "escDshotDirectionDialog-MultiMode": {
+        "message": "Multi-Motor Mode"
+    },
+    "escDshotDirectionDialog-IndividualMode": {
+        "message": "Individual Mode"
+    },
+    "escDshotDirectionDialog-KeyboardShortcuts": {
+        "message": "Keyboard Shortcuts:"
+    },
+    "escDshotDirectionDialog-SpacebarHelp": {
+        "message": "Spacebar:"
+    },
+    "escDshotDirectionDialog-SpacebarHelpText": {
+        "message": "Hold to spin all motors, release to stop"
+    },
+    "escDshotDirectionDialog-SpacebarIndividualHelp": {
+        "message": "Hold to spin selected motor, release to stop"
+    },
+    "escDshotDirectionDialog-NumberKeysHelp": {
+        "message": "1-8:"
+    },
+    "escDshotDirectionDialog-NumberKeysHelpText": {
+        "message": "Toggle direction of motor 1-8"
+    },
+    "escDshotDirectionDialog-NumberKeysIndividualHelp": {
+        "message": "Select motor 1-8"
+    },
+    "escDshotDirectionDialog-SelectedMotor": {
+        "message": "Selected Motor:"
+    },
+    "escDshotDirectionDialog-SpacebarTip": {
+        "message": "Press Spacebar to acknowledge and continue to wizard"
+    },
+    "escDshotDirectionDialog-MotorDirectionChanged": {
+        "message": "Motor {0} direction changed to {1}"
+    },
+    "escDshotDirectionDialog-MotorSelected": {
+        "message": "Motor {0} selected"
+    },
+    "escDshotDirectionDialog-CurrentRPM": {
+        "message": "Motor RPM:"
+    },
+    "escDshotDirectionDialog-RPMAdjustHint": {
+        "message": "keys to adjust"
+    },
+    "escDshotDirectionDialog-PlusMinusHelp": {
+        "message": "+/-:"
+    },
+    "escDshotDirectionDialog-PlusMinusHelpText": {
+        "message": "Increase/decrease motor RPM by 10"
+    },
+    "escDshotDirectionDialog-RPMChanged": {
+        "message": "Motor RPM changed to {0}"
+    },
     "sensorsInfo": {
         "message": "Keep in mind that using fast update periods and rendering multiple graphs at the same time is resource heavy and will burn your battery quicker if you use a laptop.<br />We recommend to only render graphs for sensors you are interested in while using reasonable update periods."
     },

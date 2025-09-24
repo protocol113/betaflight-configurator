@@ -25,43 +25,60 @@
             </div>
         </div>
         <div id="escDshotDirectionDialog-WizardDialog" class="display-contents">
-            <a href="#" id="escDshotDirectionDialog-SpinWizard" class="regular-button" i18n="escDshotDirectionDialog-SpinWizard"></a>
             <div id="escDshotDirectionDialog-SpinningWizard" class="display-contents">
+                <!-- Motor RPM Control -->
+                <div id="escDshotDirectionDialog-RPMControl" class="rpm-control">
+                    <span i18n="escDshotDirectionDialog-CurrentRPM">Motor RPM:</span> 
+                    <strong id="escDshotDirectionDialog-RPMValue">1070</strong>
+                    <span class="rpm-hint">(<strong>+/-</strong> <span i18n="escDshotDirectionDialog-RPMAdjustHint">keys to adjust</span>)</span>
+                </div>
+
+                <!-- Keyboard shortcuts help -->
+                <div id="escDshotDirectionDialog-KeyboardHelp" class="keyboard-help">
+                    <h5 i18n="escDshotDirectionDialog-KeyboardShortcuts">Keyboard Shortcuts:</h5>
+                    <div class="mode-help">
+                        <p><strong i18n="escDshotDirectionDialog-SpacebarHelp">Spacebar:</strong> <span i18n="escDshotDirectionDialog-SpacebarHelpText">Hold to spin all motors, release to stop</span></p>
+                        <p><strong i18n="escDshotDirectionDialog-NumberKeysHelp">1-8:</strong> <span i18n="escDshotDirectionDialog-NumberKeysHelpText">Toggle direction of motor 1-8</span></p>
+                        <p><strong i18n="escDshotDirectionDialog-PlusMinusHelp">+/-:</strong> <span i18n="escDshotDirectionDialog-PlusMinusHelpText">Increase/decrease motor RPM by 10</span></p>
+                    </div>
+                </div>
+
                 <h4 id="escDshotDirectionDialog-WizardActionHint" i18n="escDshotDirectionDialog-WizardActionHint"></h4>
                 <h4 id="escDshotDirectionDialog-WizardActionHintSecondLine" i18n="escDshotDirectionDialog-WizardActionHintSecondLine"></h4>
                 <div id="escDshotDirectionDialog-WizardMotorButtons">
                 </div>
-                <a href="#" id="escDshotDirectionDialog-StopWizard" class="regular-button" i18n="escDshotDirectionDialog-StopWizard"></a>
                 <h4 id="escDshotDirectionDialog-SettingsAutoSaved-Wizard" i18n="escDshotDirectionDialog-SettingsAutoSaved"></h4>
             </div>
         </div>
     </div>
     <div class="componentContent" id="escDshotDirectionDialog-Warning">
         <div>
-            <p class="escDshotDirectionDialog-RiskNoticeText" i18n="escDshotDirectionDialog-RiskNotice"></p>
-            <div class="escDshotDirectionToggleParentContainer">
-                <div class="escDshotDirectionToggleNarrow">
-                    <input id="escDshotDirectionDialog-safetyCheckbox" type="checkbox" class="toggle"/>
-                </div>
-                <div class="escDshotDirectionDialog-ToggleWide">
-                    <span class="motorsEnableTestMode escDshotDirectionDialog-RiskNoticeText" i18n="escDshotDirectionDialog-UnderstandRisks"></span>
+           <!-- <p class="escDshotDirectionDialog-RiskNoticeText" i18n="escDshotDirectionDialog-RiskNotice"></p> -->
+        <p class="spacebar-text"><strong i18n="escDshotDirectionDialog-SpacebarTip">Press Spacebar to acknowledge and continue to wizard</strong></p>
+            <div class="escDshotDirectionDialog-KeyboardTip">
+                <div class="spacebar-instruction">
+                    <svg class="spacebar-icon" width="120" height="40" viewBox="0 0 120 40" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Spacebar key -->
+                        <rect x="5" y="5" width="110" height="30" rx="6" ry="6" 
+                              fill="var(--accent-color)" 
+                              stroke="var(--accent-text)" 
+                              stroke-width="2"/>
+                        <!-- Inner key surface -->
+                        <rect x="8" y="8" width="104" height="24" rx="3" ry="3" 
+                              fill="var(--main-color)" 
+                              opacity="0.9"/>
+                        <!-- Spacebar text -->
+                        <text x="60" y="24" 
+                              font-family="Arial, sans-serif" 
+                              font-size="10" 
+                              font-weight="bold" 
+                              text-anchor="middle" 
+                              fill="var(--accent-text)">SPACE</text>
+                    </svg>
                 </div>
             </div>
+            
             <div class="escDshotDirectionDialog-InformationNotice" i18n="escDshotDirectionDialog-InformationNotice"></div>
-
-            <div id="escDshotDirectionDialog-StartWizardBlock" class="escDshotDirectionDialog-StartBlock">
-                <div class="escDshotDirectionDialog-Buttons">
-                    <a href="#" id="escDshotDirectionDialog-StartWizard" class="regular-button escDshotDirectionDialog-StartButton" i18n="escDshotDirectionDialog-StartWizard"></a>
-                </div>
-                <div class="escDshotDirectionDialog-Description" i18n="escDshotDirectionDialog-WizardInformationNotice"></div>
-            </div>
-
-            <div id="escDshotDirectionDialog-StartNormalBlock" class="escDshotDirectionDialog-StartBlock">
-                <div class="escDshotDirectionDialog-Buttons">
-                    <a href="#" id="escDshotDirectionDialog-Start" class="regular-button escDshotDirectionDialog-StartButton" i18n="escDshotDirectionDialog-Start"></a>
-                </div>
-                <div class="escDshotDirectionDialog-Description" i18n="escDshotDirectionDialog-NormalInformationNotice"></div>
-            </div>
 
         </div>
     </div>

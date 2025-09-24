@@ -26,6 +26,19 @@ class EscDshotDirectionComponent {
         this._allMotorsAreSpinning = false;
         this._spinDirectionToggleIsActive = true;
         this._activationButtonTimeoutId = null;
+        this._isKeyboardControlEnabled = false;
+        this._spacebarPressed = false;
+        this._keyboardEventHandlerBound = false;
+        this._isWizardActive = false;
+        this._currentMotorSpinValue = motorConfig.motorSpinValue;
+        this._defaultMotorSpinValue = motorConfig.motorSpinValue;
+        this._minMotorSpinValue = motorConfig.motorStopValue + 20; // Minimum safe spin value
+        this._maxMotorSpinValue = 2000; // Maximum throttle value
+
+        // Bind methods to preserve 'this' context
+        this._handleWizardKeyDown = this._handleWizardKeyDown.bind(this);
+        this._handleWizardKeyUp = this._handleWizardKeyUp.bind(this);
+        this._handleWarningKeyDown = this._handleWarningKeyDown.bind(this);
 
         this._contentDiv.load("./components/EscDshotDirection/Body.html", () => {
             this._initializeDialog();
@@ -51,7 +64,6 @@ class EscDshotDirectionComponent {
     }
 
     _readDom() {
-        this._domAgreeSafetyCheckBox = $("#escDshotDirectionDialog-safetyCheckbox");
         this._domStartButton = $("#escDshotDirectionDialog-Start");
         this._domStartWizardButton = $("#escDshotDirectionDialog-StartWizard");
         this._domMainContentBlock = $("#escDshotDirectionDialog-MainContent");
@@ -71,11 +83,8 @@ class EscDshotDirectionComponent {
         this._domWizardBlock = $("#escDshotDirectionDialog-WizardDialog");
         this._domNormalDialogBlock = $("#escDshotDirectionDialog-NormalDialog");
         this._domSpinningWizard = $("#escDshotDirectionDialog-SpinningWizard");
-        this._domSpinWizardButton = $("#escDshotDirectionDialog-SpinWizard");
-        this._domStopWizardButton = $("#escDshotDirectionDialog-StopWizard");
         this._domWizardMotorButtonsBlock = $("#escDshotDirectionDialog-WizardMotorButtons");
-        this._domStartWizardBlock = $("#escDshotDirectionDialog-StartWizardBlock");
-        this._domStartNormalBlock = $("#escDshotDirectionDialog-StartNormalBlock");
+        this._domRPMValue = $("#escDshotDirectionDialog-RPMValue");
 
         this._topHintText = i18n.getMessage("escDshotDirectionDialog-SelectMotor");
         this._releaseToStopText = i18n.getMessage("escDshotDirectionDialog-ReleaseToStop");
@@ -94,30 +103,44 @@ class EscDshotDirectionComponent {
 
         this._resetGui();
 
-        this._domAgreeSafetyCheckBox.on("change", () => {
-            const enabled = this._domAgreeSafetyCheckBox.is(":checked");
-            this._domStartNormalBlock.toggle(enabled);
-            this._domStartWizardBlock.toggle(enabled);
-        });
+        // Warning screen spacebar handler
+        this._setupWarningScreenKeyboard();
 
-        this._domStartButton.on("click", () => {
-            this._onStartButtonClicked();
-        });
+        // Load mixer image if FC data is available
+        if (FC.MIXER_CONFIG && FC.MIXER_CONFIG.mixer !== undefined) {
+            const imgSrc = getMixerImageSrc(
+                FC.MIXER_CONFIG.mixer,
+                FC.MIXER_CONFIG.reverseMotorDir,
+                FC.CONFIG.apiVersion,
+            );
 
-        this._domStartWizardButton.on("click", () => {
-            this._onStartWizardButtonClicked();
-        });
+            if (imgSrc) {
+                console.log("Loading mixer image:", imgSrc);
 
-        this._domSpinWizardButton.on("click", () => {
-            this._onSpinWizardButtonClicked();
-        });
+                // Convert ./resources/ to /resources/ for server
+                const serverPath = imgSrc.replace("./", "/");
+                console.log("Server path:", serverPath);
 
-        this._domStopWizardButton.on("click", () => {
-            this._onStopWizardButtonClicked();
-        });
+                this._domMixerImg.on("load", () => {
+                    console.log("✅ Mixer image loaded successfully!");
+                    this._domMixerImg.show();
+                });
 
-        const imgSrc = getMixerImageSrc(FC.MIXER_CONFIG.mixer, FC.MIXER_CONFIG.reverseMotorDir, FC.CONFIG.apiVersion);
-        this._domMixerImg.attr("src", imgSrc);
+                this._domMixerImg.on("error", () => {
+                    console.log("❌ Failed to load mixer image - hiding");
+                    this._domMixerImg.hide();
+                });
+
+                this._domMixerImg.attr("src", serverPath);
+            } else {
+                this._domMixerImg.hide();
+            }
+        } else {
+            this._domMixerImg.hide();
+        }
+
+        // Initialize RPM display
+        this._updateRPMDisplay();
 
         this._onLoadedCallback();
     }
@@ -285,21 +308,201 @@ class EscDshotDirectionComponent {
         }
     }
 
+    _updateRPMDisplay() {
+        this._domRPMValue.text(this._currentMotorSpinValue);
+    }
+
+    _adjustRPM(delta) {
+        const newValue = this._currentMotorSpinValue + delta;
+
+        // Clamp to safe bounds
+        if (newValue >= this._minMotorSpinValue && newValue <= this._maxMotorSpinValue) {
+            this._currentMotorSpinValue = newValue;
+            this._updateRPMDisplay();
+
+            // Update the motor driver's spin value
+            this._motorDriver.setMotorSpinValue(this._currentMotorSpinValue);
+
+            console.log(`Motor RPM changed to: ${this._currentMotorSpinValue}`);
+
+            // If motors are currently spinning, restart them with the new value
+            if (this._spacebarPressed) {
+                this._motorDriver.spinAllMotors();
+            }
+        }
+    }
+
     close() {
         this._motorDriver.stopAllMotorsNow();
         this._motorDriver.deactivate();
+        this._disableAllKeyboardControl();
         this._resetGui();
+    }
+
+    _disableAllKeyboardControl() {
+        document.removeEventListener("keydown", this._handleWarningKeyDown, true);
+        document.removeEventListener("keydown", this._handleWizardKeyDown, true);
+        document.removeEventListener("keyup", this._handleWizardKeyUp, true);
+        window.removeEventListener("blur", this._handleWizardKeyDown);
+        this._keyboardEventHandlerBound = false;
+        this._isKeyboardControlEnabled = false;
+        this._spacebarPressed = false;
+    }
+
+    _setupWarningScreenKeyboard() {
+        // Remove existing handler first to prevent duplicates
+        document.removeEventListener("keydown", this._handleWarningKeyDown, true);
+
+        // Use addEventListener with capture phase for better event handling
+        document.addEventListener("keydown", this._handleWarningKeyDown, true);
+    }
+
+    _handleWarningKeyDown(event) {
+        if (event.code === "Space" && this._domWarningContentBlock.is(":visible")) {
+            event.preventDefault();
+            event.stopPropagation();
+            this._handleWarningSpacebar();
+        }
+    }
+
+    _handleWarningSpacebar() {
+        if (!this._escProtocolIsDshot) {
+            return; // Don't enable keyboard shortcuts for non-DShot configurations
+        }
+
+        // Go straight to wizard spinning mode
+        this._startWizardDirectly();
+    }
+
+    _enableKeyboardControl() {
+        if (this._keyboardEventHandlerBound) return;
+
+        // Use addEventListener with capture phase for reliable event handling
+        document.addEventListener("keydown", this._handleWizardKeyDown, true);
+        document.addEventListener("keyup", this._handleWizardKeyUp, true);
+
+        // Add blur event to stop motors if focus is lost while spacebar is pressed
+        window.addEventListener("blur", () => {
+            if (this._spacebarPressed) {
+                this._spacebarPressed = false;
+                this._handleSpacebarRelease();
+            }
+        });
+
+        this._keyboardEventHandlerBound = true;
+        this._isKeyboardControlEnabled = true;
+    }
+
+    _disableKeyboardControl() {
+        document.removeEventListener("keydown", this._handleWizardKeyDown, true);
+        document.removeEventListener("keyup", this._handleWizardKeyUp, true);
+        window.removeEventListener("blur", this._handleWizardKeyDown);
+        this._keyboardEventHandlerBound = false;
+        this._isKeyboardControlEnabled = false;
+        this._spacebarPressed = false;
+    }
+
+    _handleWizardKeyDown(event) {
+        if (!this._isKeyboardControlEnabled || !this._isWizardActive) {
+            return;
+        }
+
+        // Always prevent spacebar default behavior (scrolling)
+        if (event.code === "Space") {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!this._spacebarPressed && !event.repeat) {
+                this._spacebarPressed = true;
+                this._handleSpacebarPress();
+            }
+            return;
+        }
+
+        // Number keys 1-8 - motor actions
+        if (event.key >= "1" && event.key <= "8" && !event.repeat) {
+            event.preventDefault();
+            event.stopPropagation();
+            const motorIndex = parseInt(event.key) - 1;
+
+            if (motorIndex < this._numberOfMotors) {
+                this._toggleMotorDirection(motorIndex);
+            }
+            return;
+        }
+
+        // Plus and Minus keys - RPM adjustment
+        if ((event.code === "Equal" || event.code === "NumpadAdd") && !event.repeat) {
+            event.preventDefault();
+            event.stopPropagation();
+            this._adjustRPM(10);
+            return;
+        }
+
+        if ((event.code === "Minus" || event.code === "NumpadSubtract") && !event.repeat) {
+            event.preventDefault();
+            event.stopPropagation();
+            this._adjustRPM(-10);
+            return;
+        }
+    }
+
+    _handleWizardKeyUp(event) {
+        if (!this._isKeyboardControlEnabled || !this._isWizardActive) {
+            return;
+        }
+
+        // Spacebar release - stop motors immediately
+        if (event.code === "Space") {
+            event.preventDefault();
+            event.stopPropagation();
+            if (this._spacebarPressed) {
+                this._spacebarPressed = false;
+                this._handleSpacebarRelease();
+            }
+        }
+    }
+
+    _handleSpacebarPress() {
+        this._motorDriver.spinAllMotors();
+        console.log("Motors started spinning");
+    }
+
+    _handleSpacebarRelease() {
+        this._motorDriver.stopAllMotorsNow();
+        console.log("Motors stopped");
+    }
+
+    _toggleMotorDirection(motorIndex) {
+        const button = this._wizardMotorButtons[motorIndex];
+        const currentlyReversed = button.hasClass(EscDshotDirectionComponent.PUSHED_BUTTON_CLASS);
+
+        if (currentlyReversed) {
+            button.removeClass(EscDshotDirectionComponent.PUSHED_BUTTON_CLASS);
+            this._motorDriver.setEscSpinDirection(motorIndex, DshotCommand.dshotCommands_e.DSHOT_CMD_SPIN_DIRECTION_1);
+            console.log(`Motor ${motorIndex + 1} direction changed to: NORMAL`);
+        } else {
+            button.addClass(EscDshotDirectionComponent.PUSHED_BUTTON_CLASS);
+            this._motorDriver.setEscSpinDirection(motorIndex, DshotCommand.dshotCommands_e.DSHOT_CMD_SPIN_DIRECTION_2);
+            console.log(`Motor ${motorIndex + 1} direction changed to: REVERSED`);
+        }
     }
 
     _resetGui() {
         this._toggleMainContent(false);
-        this._domStartNormalBlock.hide();
-        this._domStartWizardBlock.hide();
+        this._domSpinningWizard.hide();
+        this._isWizardActive = false;
 
-        this._domAgreeSafetyCheckBox.prop("checked", false);
-        this._domAgreeSafetyCheckBox.trigger("change");
         this._domSecondActionDiv.toggle(false);
         this._changeSelectedMotor(-1);
+
+        // Reset to multi-motor mode (no individual mode anymore)
+
+        // Reset RPM to default value
+        this._currentMotorSpinValue = this._defaultMotorSpinValue;
+        this._updateRPMDisplay();
+
+        // Re-establish warning screen keyboard handler
+        this._setupWarningScreenKeyboard();
 
         this._checkForConfigurationErrors();
     }
@@ -324,31 +527,14 @@ class EscDshotDirectionComponent {
         if (anyError) {
             this._domMainContentBlock.hide();
             this._domWarningContentBlock.hide();
-            this._domStartNormalBlock.hide();
-            this._domStartWizardBlock.hide();
             this._domConfigErrors.show();
         } else {
             this._domConfigErrors.hide();
         }
     }
 
-    _onStartButtonClicked() {
-        this._toggleMainContent(true);
-        this._domWizardBlock.toggle(false);
-        this._domNormalDialogBlock.toggle(true);
-        this._motorDriver.activate();
-    }
-
-    _onStartWizardButtonClicked() {
-        this._domSpinningWizard.toggle(false);
-        this._domSpinWizardButton.toggle(true);
-        this._toggleMainContent(true);
-        this._domWizardBlock.toggle(true);
-        this._domNormalDialogBlock.toggle(false);
-        this._motorDriver.activate();
-    }
-
-    _onSpinWizardButtonClicked() {
+    _startWizardDirectly() {
+        // Reset all motor directions to normal
         for (let i = 0; i < this._numberOfMotors; i++) {
             this._wizardMotorButtons[i].removeClass(EscDshotDirectionComponent.PUSHED_BUTTON_CLASS);
         }
@@ -358,18 +544,24 @@ class EscDshotDirectionComponent {
             DshotCommand.dshotCommands_e.DSHOT_CMD_SPIN_DIRECTION_1,
         );
 
-        this._domSpinWizardButton.toggle(false);
-        this._domSpinningWizard.toggle(true);
-        this._motorDriver.spinAllMotors();
+        // Go straight to wizard view (but don't auto-spin motors)
+        this._toggleMainContent(true);
+        this._domWizardBlock.show();
+        this._domNormalDialogBlock.hide();
+        this._domSpinningWizard.show();
+
+        // Set wizard active state
+        this._isWizardActive = true;
+
+        this._motorDriver.activate();
+
+        // Sync motor driver with current RPM setting
+        this._motorDriver.setMotorSpinValue(this._currentMotorSpinValue);
+
+        // Don't auto-spin - wait for spacebar press
 
         this._activateWizardMotorButtons(0);
-    }
-
-    _onStopWizardButtonClicked() {
-        this._domSpinWizardButton.toggle(true);
-        this._domSpinningWizard.toggle(false);
-        this._motorDriver.stopAllMotorsNow();
-        this._deactivateWizardMotorButtons();
+        this._enableKeyboardControl();
     }
 
     _toggleMainContent(value) {

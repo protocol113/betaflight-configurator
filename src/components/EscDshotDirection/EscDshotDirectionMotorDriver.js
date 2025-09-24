@@ -29,6 +29,10 @@ class EscDshotDirectionMotorDriver {
         this._EscDshotCommandQueue.stopWhenEmpty();
     }
 
+    setMotorSpinValue(newSpinValue) {
+        this._motorSpinValue = newSpinValue;
+    }
+
     stopMotor(motorIndex) {
         this._spinMotor(motorIndex, this._motorStopValue);
     }
